@@ -1,97 +1,121 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Titanium (Ti — Element 22)
 
-# Getting Started
+Field technician mobile app for the **Carbon ERP** platform.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+Built by **Foundry Familiars** / Carborundum AI.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## What This Is
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Titanium is the native mobile companion to Carbon — the ERP for trades businesses (HVAC, plumbing, electrical, auto service, elevator). Field techs use Titanium to:
 
-```sh
-# Using npm
-npm start
+- View their daily job queue
+- Access job details, customer records, and site addresses
+- Create and update work orders in the field
+- Look up equipment history for a site
 
-# OR using Yarn
-yarn start
-```
+Offline-capable by design. Not a PWA.
 
-## Step 2: Build and run your app
+---
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## Stack
 
-### Android
+| Layer | Choice |
+|---|---|
+| Framework | React Native 0.85 (bare CLI, no Expo) |
+| Language | TypeScript |
+| Navigation | React Navigation 7 (native stack + bottom tabs) |
+| Server state | TanStack React Query |
+| Local/UI state | Zustand |
+| HTTP | Axios (`src/api/carbonClient.ts`) |
 
-```sh
-# Using npm
-npm run android
+---
 
-# OR using Yarn
-yarn android
-```
+## Run
+
+### Prerequisites
+
+- Node 22+
+- Ruby (iOS)
+- Xcode 15+ (iOS)
+- Android Studio + SDK 34 (Android)
+- CocoaPods: `bundle install && bundle exec pod install`
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+cd ios && bundle exec pod install && cd ..
+npx react-native run-ios
 ```
 
-Then, and every time you update your native dependencies, run:
+### Android
 
-```sh
-bundle exec pod install
+```bash
+npx react-native run-android
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Metro bundler (standalone)
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+```bash
+npm start
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Project Structure
 
-## Step 3: Modify your app
+```
+src/
+  api/
+    carbonClient.ts         # Axios client → Carbon ERP backend
+  navigation/
+    index.tsx               # Root navigator (tabs + stacks)
+  screens/
+    HomeScreen.tsx          # Today's job queue
+    JobDetailScreen.tsx     # Job record + drill-downs
+    WorkOrderScreen.tsx     # Create / update work order
+    CustomerListScreen.tsx  # Searchable customer list
+    CustomerScreen.tsx      # Customer record + equipment
+    EquipmentListScreen.tsx # All equipment across sites
+    EquipmentScreen.tsx     # Equipment detail + service history
+  store/
+    index.ts                # Zustand store (auth, offline queue)
+  types/
+    models.ts               # Domain types (Job, Customer, Equipment, WorkOrder)
+    navigation.ts           # Navigator param list types
+```
 
-Now that you have successfully run the app, let's make changes!
+---
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Backend
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Carbon ERP API base URL is set via `CARBON_API_URL` env var (see `src/api/carbonClient.ts`).
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Default: `https://api.carbonerp.internal/v1`
 
-## Congratulations! :tada:
+All screens currently use mock data. Wire up real data by implementing
+`useQuery(() => carbonClient.<method>(...))` in each screen.
 
-You've successfully run and modified your React Native App. :partying_face:
+---
 
-### Now what?
+## GitHub
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Repository: [github.com/srmbsrg/titanium](https://github.com/srmbsrg/titanium)
 
-# Troubleshooting
+### Manual repo setup (if push was not completed automatically)
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+Store your GitHub PAT at `C:\Users\scott\.secrets\github_pat.txt`, then:
 
-# Learn More
+```bash
+# Create repo
+PAT=$(cat /c/Users/scott/.secrets/github_pat.txt)
+curl -X POST https://api.github.com/user/repos \
+  -H "Authorization: Bearer $PAT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"titanium","description":"Titanium field app — Carbon ERP companion (Foundry Familiars)","private":false}'
 
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+# Push
+git remote add origin https://github.com/srmbsrg/titanium.git
+git push -u origin master
+```
