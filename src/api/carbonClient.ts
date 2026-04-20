@@ -8,8 +8,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { Customer, Equipment, Job, ServiceHistoryEntry, WorkOrder, CompletionReport, PaymentRecord } from '../types/models';
+import { Config } from '../config';
 
-const BASE_URL = process.env.MANIFOLD_API_URL ?? 'https://app.carborundum.ai/api/erp';
+const BASE_URL = Config.MANIFOLD_API_URL;
 
 const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,

@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { useTitaniumStore } from '../store';
 import { queryTes } from '../api/carbonClient';
+import { Config } from '../config';
 
 // ---------------------------------------------------------------------------
 // Optional native module imports — gracefully degrade if not linked
@@ -48,7 +49,7 @@ try { RNFS = require('react-native-fs'); } catch {}
 
 const ELEVENLABS_VOICE_ID = 'XEQBC9sleaE3f5ff82UR'; // Tes
 const ELEVENLABS_API_URL = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`;
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY ?? '';
+const ELEVENLABS_API_KEY = Config.ELEVENLABS_API_KEY;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -367,13 +368,19 @@ export function CarbCommScreen() {
 // Utility
 // ---------------------------------------------------------------------------
 
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
 function bufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
   const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  let result = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i], b1 = bytes[i + 1] ?? 0, b2 = bytes[i + 2] ?? 0;
+    result += BASE64_CHARS[b0 >> 2];
+    result += BASE64_CHARS[((b0 & 3) << 4) | (b1 >> 4)];
+    result += i + 1 < bytes.length ? BASE64_CHARS[((b1 & 15) << 2) | (b2 >> 6)] : '=';
+    result += i + 2 < bytes.length ? BASE64_CHARS[b2 & 63] : '=';
   }
-  return btoa(binary);
+  return result;
 }
 
 // ---------------------------------------------------------------------------

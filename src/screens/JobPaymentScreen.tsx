@@ -21,6 +21,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import { carbonClient } from '../api/carbonClient';
 import { useTitaniumStore } from '../store';
+import { Config } from '../config';
 import type { JobsStackParamList } from '../types/navigation';
 import type { PaymentMethod } from '../types/models';
 
@@ -41,7 +42,7 @@ export function JobPaymentScreen({ route, navigation }: Props) {
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
   const [checkNumber, setCheckNumber] = useState('');
   const [cardLast4, setCardLast4] = useState('');
-  const [stripeReady] = useState(!!process.env.STRIPE_PUBLISHABLE_KEY);
+  const [stripeReady] = useState(!!Config.STRIPE_PUBLISHABLE_KEY);
 
   const paymentMutation = useMutation({
     mutationFn: () =>
