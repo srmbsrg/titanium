@@ -1,6 +1,5 @@
 /**
  * Titanium — Core domain model types
- * Mirrors the Carbon ERP data model for field-side consumption.
  */
 
 export type JobStatus =
@@ -11,6 +10,8 @@ export type JobStatus =
   | 'cancelled';
 
 export type WorkOrderStatus = 'draft' | 'open' | 'in_progress' | 'complete';
+
+export type PaymentMethod = 'card' | 'cash' | 'check' | 'invoice';
 
 export interface Address {
   street: string;
@@ -34,8 +35,8 @@ export interface Equipment {
   make: string;
   model: string;
   serialNumber?: string;
-  installedAt?: string; // ISO date
-  lastServicedAt?: string; // ISO date
+  installedAt?: string;
+  lastServicedAt?: string;
   notes?: string;
 }
 
@@ -43,7 +44,7 @@ export interface ServiceHistoryEntry {
   id: string;
   equipmentId: string;
   workOrderId: string;
-  date: string; // ISO date
+  date: string;
   technicianName: string;
   summary: string;
 }
@@ -53,11 +54,13 @@ export interface Job {
   customerId: string;
   customer: Customer;
   address: Address;
-  scheduledAt: string; // ISO datetime
+  scheduledAt: string;
   status: JobStatus;
   description: string;
   notes?: string;
   workOrderIds: string[];
+  estimatedDuration?: number; // minutes
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
 }
 
 export interface WorkOrder {
@@ -66,7 +69,34 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   description: string;
   techNotes?: string;
-  parts?: string[];
-  createdAt: string; // ISO datetime
-  completedAt?: string; // ISO datetime
+  parts?: PartUsed[];
+  laborHours?: number;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface PartUsed {
+  sku: string;
+  name: string;
+  quantity: number;
+  unitCost: number;
+}
+
+export interface CompletionReport {
+  jobId: string;
+  workSummary: string;
+  partsUsed: PartUsed[];
+  laborHours: number;
+  techSignature?: string;
+  customerSignature?: string;
+  photoUris?: string[];
+  completedAt: string;
+}
+
+export interface PaymentRecord {
+  jobId: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  collectedAt: string;
 }

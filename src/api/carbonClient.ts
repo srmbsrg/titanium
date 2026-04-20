@@ -1,29 +1,15 @@
 /**
- * carbonClient — Titanium's HTTP client for the Carbon ERP backend
+ * carbonClient — Titanium's HTTP client for the Carborundum AI / Manifold ERP backend
  *
- * Carbon is the Carborundum AI ERP platform for trades businesses.
- * All field-side data access goes through this module.
- *
- * Status: stub — no real endpoints yet. Replace BASE_URL and implement
- * each method against the Carbon API once available.
- *
- * Auth: Bearer token injected via Axios interceptor (set token after login).
+ * Base URL: https://app.carborundum.ai/api/erp
+ * Auth: Bearer JWT (set after login via useTitaniumStore)
  */
 
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { Customer, Equipment, Job, ServiceHistoryEntry, WorkOrder } from '../types/models';
+import type { Customer, Equipment, Job, ServiceHistoryEntry, WorkOrder, CompletionReport, PaymentRecord } from '../types/models';
 
-// ---------------------------------------------------------------------------
-// Config — update BASE_URL when Carbon backend is reachable
-// ---------------------------------------------------------------------------
-
-const BASE_URL =
-  process.env.CARBON_API_URL ?? 'https://api.carbonerp.internal/v1';
-
-// ---------------------------------------------------------------------------
-// Axios instance
-// ---------------------------------------------------------------------------
+const BASE_URL = process.env.MANIFOLD_API_URL ?? 'https://app.carborundum.ai/api/erp';
 
 const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -34,57 +20,64 @@ const http: AxiosInstance = axios.create({
   },
 });
 
-// Inject auth token
+// Inject auth token from Zustand store
 http.interceptors.request.use((config) => {
-  // Token is stored in Zustand store; import lazily to avoid circular deps
-  // const { token } = useTitaniumStore.getState();
-  // if (token) config.headers.Authorization = `Bearer ${token}`;
+  try {
+    // Dynamic import avoids circular dependency
+    const { useTitaniumStore } = require('../store');
+    const { token } = useTitaniumStore.getState();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  } catch {}
   return config;
 });
 
-// Global error handler
 http.interceptors.response.use(
   (res) => res,
   (err) => {
-    // TODO: detect offline (network error) and push mutation to offline queue
+    if (!err.response) {
+      console.warn('[Titanium] Network error — check connectivity');
+    }
     return Promise.reject(err);
   },
 );
 
 // ---------------------------------------------------------------------------
-// Jobs
+// Jobs — maps to Manifold CRM / service-orders
 // ---------------------------------------------------------------------------
 
-export async function getJobs(): Promise<Job[]> {
-  const { data } = await http.get<Job[]>('/jobs');
-  return data;
+export async function getJobs(techId?: string): Promise<Job[]> {
+  const { data } = await http.get('/crm/sales-orders', {
+    params: { assignedTo: techId, type: 'service' },
+  });
+  return (data.salesOrders || data.orders || []).map(mapToJob);
 }
 
 export async function getJob(jobId: string): Promise<Job> {
-  const { data } = await http.get<Job>(`/jobs/${jobId}`);
-  return data;
+  const { data } = await http.get(`/crm/sales-orders/${jobId}`);
+  return mapToJob(data.salesOrder || data);
 }
 
-export async function updateJobStatus(
-  jobId: string,
-  status: Job['status'],
-): Promise<Job> {
-  const { data } = await http.patch<Job>(`/jobs/${jobId}/status`, { status });
-  return data;
+export async function updateJobStatus(jobId: string, status: Job['status']): Promise<Job> {
+  const { data } = await http.patch(`/crm/sales-orders/${jobId}`, { status });
+  return mapToJob(data.salesOrder || data);
+}
+
+export async function completeJob(report: CompletionReport): Promise<void> {
+  await http.post(`/crm/sales-orders/${report.jobId}/complete`, report);
 }
 
 // ---------------------------------------------------------------------------
-// Customers
+// Customers — maps to Manifold CRM customers
 // ---------------------------------------------------------------------------
 
 export async function getCustomers(): Promise<Customer[]> {
-  const { data } = await http.get<Customer[]>('/customers');
-  return data;
+  const { data } = await http.get('/crm/customers');
+  return data.customers || [];
 }
 
 export async function getCustomer(customerId: string): Promise<Customer> {
-  const { data } = await http.get<Customer>(`/customers/${customerId}`);
-  return data;
+  const { data } = await http.get(`/crm/customers/${customerId}`);
+  return data.customer || data;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,64 +85,108 @@ export async function getCustomer(customerId: string): Promise<Customer> {
 // ---------------------------------------------------------------------------
 
 export async function getWorkOrder(workOrderId: string): Promise<WorkOrder> {
-  const { data } = await http.get<WorkOrder>(`/work-orders/${workOrderId}`);
-  return data;
+  const { data } = await http.get(`/crm/sales-orders/${workOrderId}`);
+  return data.salesOrder || data;
 }
 
 export async function saveWorkOrder(
   payload: Omit<WorkOrder, 'id' | 'createdAt'> & { id?: string },
 ): Promise<WorkOrder> {
   if (payload.id) {
-    const { data } = await http.put<WorkOrder>(
-      `/work-orders/${payload.id}`,
-      payload,
-    );
-    return data;
+    const { data } = await http.patch(`/crm/sales-orders/${payload.id}`, payload);
+    return data.salesOrder || data;
   }
-  const { data } = await http.post<WorkOrder>('/work-orders', payload);
-  return data;
+  const { data } = await http.post('/crm/sales-orders', payload);
+  return data.salesOrder || data;
 }
 
 // ---------------------------------------------------------------------------
 // Equipment
 // ---------------------------------------------------------------------------
 
-export async function getEquipmentForCustomer(
-  customerId: string,
-): Promise<Equipment[]> {
-  const { data } = await http.get<Equipment[]>(
-    `/customers/${customerId}/equipment`,
-  );
-  return data;
+export async function getEquipmentForCustomer(customerId: string): Promise<Equipment[]> {
+  const { data } = await http.get(`/crm/customers/${customerId}/equipment`);
+  return data.equipment || [];
 }
 
 export async function getEquipment(equipmentId: string): Promise<Equipment> {
-  const { data } = await http.get<Equipment>(`/equipment/${equipmentId}`);
-  return data;
+  const { data } = await http.get(`/inventory/equipment/${equipmentId}`);
+  return data.item || data;
 }
 
 export async function getAllEquipment(): Promise<Equipment[]> {
-  const { data } = await http.get<Equipment[]>('/equipment');
-  return data;
+  const { data } = await http.get('/inventory', { params: { type: 'stock' } });
+  return data.inventory || [];
 }
 
-export async function getServiceHistory(
-  equipmentId: string,
-): Promise<ServiceHistoryEntry[]> {
-  const { data } = await http.get<ServiceHistoryEntry[]>(
-    `/equipment/${equipmentId}/service-history`,
-  );
-  return data;
+export async function getServiceHistory(equipmentId: string): Promise<ServiceHistoryEntry[]> {
+  const { data } = await http.get(`/crm/customers/equipment/${equipmentId}/history`);
+  return data.history || [];
 }
 
 // ---------------------------------------------------------------------------
-// Convenience re-export
+// Payment
 // ---------------------------------------------------------------------------
+
+export async function recordPayment(payment: PaymentRecord): Promise<void> {
+  await http.post('/finance', {
+    entity: 'invoice_payment',
+    data: {
+      jobId: payment.jobId,
+      amountPaid: payment.amount,
+      method: payment.method,
+      reference: payment.reference,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tes AI (Carb-O-Comm agent)
+// ---------------------------------------------------------------------------
+
+export async function queryTes(message: string, context: {
+  jobId?: string;
+  customerId?: string;
+  techName?: string;
+}): Promise<string> {
+  const { data } = await http.post('/agents/tes/query', { message, context });
+  return data.response || data.message || 'No response from Tes.';
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function mapToJob(raw: any): Job {
+  return {
+    id: raw.id,
+    customerId: raw.customerId || raw.customer?.id || '',
+    customer: raw.customer || {
+      id: raw.customerId || '',
+      name: raw.customerName || 'Unknown',
+      phone: '',
+      address: { street: raw.address || '', city: '', state: '', zip: '' },
+    },
+    address: raw.address
+      ? typeof raw.address === 'string'
+        ? { street: raw.address, city: '', state: '', zip: '' }
+        : raw.address
+      : { street: '', city: '', state: '', zip: '' },
+    scheduledAt: raw.scheduledAt || raw.orderDate || new Date().toISOString(),
+    status: raw.status || 'scheduled',
+    description: raw.description || raw.notes || '',
+    notes: raw.notes,
+    workOrderIds: raw.workOrderIds || [],
+    estimatedDuration: raw.estimatedDuration,
+    priority: raw.priority,
+  };
+}
 
 export const carbonClient = {
   getJobs,
   getJob,
   updateJobStatus,
+  completeJob,
   getCustomers,
   getCustomer,
   getWorkOrder,
@@ -158,4 +195,6 @@ export const carbonClient = {
   getEquipment,
   getAllEquipment,
   getServiceHistory,
+  recordPayment,
+  queryTes,
 };

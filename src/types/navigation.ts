@@ -1,12 +1,13 @@
 /**
  * Titanium — Navigation type definitions
- * Root param lists for all navigators in the app.
  */
 
 export type JobsStackParamList = {
   Home: undefined;
   JobDetail: { jobId: string };
   WorkOrder: { workOrderId?: string; jobId: string };
+  JobComplete: { jobId: string };
+  JobPayment: { jobId: string; amount?: number };
 };
 
 export type CustomersStackParamList = {
@@ -20,8 +21,14 @@ export type EquipmentStackParamList = {
   EquipmentDetail: { equipmentId: string; customerId?: string };
 };
 
+export type DispatchStackParamList = {
+  DispatchList: undefined;
+  JobDetail: { jobId: string };
+};
+
 export type RootTabParamList = {
   Jobs: undefined;
+  Dispatch: undefined;
   Customers: undefined;
   Equipment: undefined;
 };
