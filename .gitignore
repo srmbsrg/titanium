@@ -35,6 +35,11 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Release signing secrets — never commit real passwords
+# android/gradle.properties CARBORUNDUM_STORE_PASSWORD and CARBORUNDUM_KEY_PASSWORD
+# must be replaced with real values locally and kept out of git
+.env
+
 # node.js
 #
 node_modules/
