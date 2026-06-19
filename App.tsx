@@ -1,33 +1,21 @@
 /**
- * Titanium — Field app for Carbon ERP
- * Carborundum AI / Foundry Familiars
+ * Loadstone — Structured Hydration companion app.
+ *
+ * Offline-first wellness companion for the Loadstone magnetic water flask.
+ * (Built inside the Titanium RN repo; the legacy Carborundum field-app modules
+ * under src/screens remain in the tree but are not mounted here.)
  */
 
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { RootNavigator } from './src/navigation';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Sensible defaults for a field app that may have intermittent connectivity
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 min
-      gcTime: 30 * 60 * 1000,   // 30 min cache
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import { LoadstoneApp } from './src/loadstone/LoadstoneApp';
 
 function App(): React.JSX.Element {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <RootNavigator />
-        </QueryClientProvider>
+        <LoadstoneApp />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
