@@ -1,21 +1,33 @@
 /**
- * Loadstone — Structured Hydration companion app.
+ * Titanium — Carborundum AI field-service app.
  *
- * Offline-first wellness companion for the Loadstone magnetic water flask.
- * (Built inside the Titanium RN repo; the legacy Carborundum field-app modules
- * under src/screens remain in the tree but are not mounted here.)
+ * Standalone React Native app for trades techs: dispatch → work order →
+ * time & materials → service-agreement sell → invoice → on-site payment,
+ * with Carb-O-Comm voice and offline support, talking to the Manifold ERP.
+ *
+ * (The Loadstone hydration companion that briefly lived in App.tsx has been
+ *  un-mounted; its modules remain under src/loadstone/ for a future split.)
  */
 
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LoadstoneApp } from './src/loadstone/LoadstoneApp';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+import { RootNavigator } from './src/navigation';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { useTitaniumStore } from './src/store';
+
+const queryClient = new QueryClient();
 
 function App(): React.JSX.Element {
+  const isAuthenticated = useTitaniumStore((s) => s.isAuthenticated);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <LoadstoneApp />
+        <QueryClientProvider client={queryClient}>
+          {isAuthenticated ? <RootNavigator /> : <LoginScreen />}
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
