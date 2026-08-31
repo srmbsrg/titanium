@@ -27,6 +27,7 @@ import { CustomerListScreen } from '../screens/CustomerListScreen';
 import { CustomerScreen } from '../screens/CustomerScreen';
 import { EquipmentListScreen } from '../screens/EquipmentListScreen';
 import { EquipmentScreen } from '../screens/EquipmentScreen';
+import { HowToScreen } from '../screens/HowToScreen';
 import { CarbCommScreen } from '../screens/CarbCommScreen';
 
 import type {
@@ -106,6 +107,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Dispatch: '📡',
     Customers: '👥',
     Equipment: '🔧',
+    HowTo: '📘',
   };
   return (
     <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
@@ -130,6 +132,11 @@ export function RootNavigator() {
         <Tab.Screen name="Dispatch" component={DispatchNavigator} />
         <Tab.Screen name="Customers" component={CustomersNavigator} />
         <Tab.Screen name="Equipment" component={EquipmentNavigator} />
+        <Tab.Screen
+          name="HowTo"
+          component={HowToScreen}
+          options={{ tabBarLabel: 'How-To' }}
+        />
       </Tab.Navigator>
 
       {/* Global Carb-O-Comm voice modal — overlays all tabs */}

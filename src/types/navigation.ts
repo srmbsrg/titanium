@@ -31,4 +31,5 @@ export type RootTabParamList = {
   Dispatch: undefined;
   Customers: undefined;
   Equipment: undefined;
+  HowTo: undefined;
 };
