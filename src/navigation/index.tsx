@@ -28,6 +28,7 @@ import { CustomerScreen } from '../screens/CustomerScreen';
 import { EquipmentListScreen } from '../screens/EquipmentListScreen';
 import { EquipmentScreen } from '../screens/EquipmentScreen';
 import { HowToScreen } from '../screens/HowToScreen';
+import { UpsellScreen } from '../screens/UpsellScreen';
 import { CarbCommScreen } from '../screens/CarbCommScreen';
 
 import type {
@@ -108,6 +109,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Customers: '👥',
     Equipment: '🔧',
     HowTo: '📘',
+    Upsell: '💲',
   };
   return (
     <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
@@ -136,6 +138,11 @@ export function RootNavigator() {
           name="HowTo"
           component={HowToScreen}
           options={{ tabBarLabel: 'How-To' }}
+        />
+        <Tab.Screen
+          name="Upsell"
+          component={UpsellScreen}
+          options={{ tabBarLabel: 'Upsell' }}
         />
       </Tab.Navigator>
 

@@ -32,4 +32,5 @@ export type RootTabParamList = {
   Customers: undefined;
   Equipment: undefined;
   HowTo: undefined;
+  Upsell: undefined;
 };
