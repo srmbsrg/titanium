@@ -199,3 +199,107 @@ export const carbonClient = {
   recordPayment,
   queryTes,
 };
+
+// ===========================================================================
+// Carbon dedicated jobs API — talks to /api/carbon/jobs (additive; separate
+// from the ERP /crm/sales-orders path above). Backed by Silicon's Postgres
+// Job / JobNote / JobPhoto models. Lights up once the carbon migration is
+// applied to the Silicon DB. Response shape is { ok, ... }.
+// ===========================================================================
+
+const carbonHttp: AxiosInstance = axios.create({
+  baseURL: Config.CARBON_API_URL,
+  timeout: 15_000,
+  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+});
+
+carbonHttp.interceptors.request.use((config) => {
+  try {
+    const { useTitaniumStore } = require('../store');
+    const { token } = useTitaniumStore.getState();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  } catch {}
+  return config;
+});
+
+function mapCarbonJob(raw: any): Job {
+  const street =
+    typeof raw.address === 'string' ? raw.address : raw.address?.street ?? '';
+  const addr = { street, city: '', state: '', zip: '' };
+  return {
+    id: raw.id,
+    customerId: raw.customerId || '',
+    customer: {
+      id: raw.customerId || '',
+      name: raw.customerName || 'Unknown',
+      phone: '',
+      address: addr,
+    },
+    address: addr,
+    scheduledAt: raw.scheduledFor || raw.createdAt || new Date().toISOString(),
+    status: raw.status || 'scheduled',
+    description: raw.symptom || raw.diagnosis || '',
+    notes: Array.isArray(raw.notes)
+      ? raw.notes.map((n: any) => n.body).join('\n')
+      : raw.notes,
+    workOrderIds: [],
+    priority: raw.priority,
+  } as Job;
+}
+
+export async function getCarbonJobs(opts?: { status?: string; tech?: string }): Promise<Job[]> {
+  const { data } = await carbonHttp.get('/jobs', { params: opts });
+  return (data.jobs || []).map(mapCarbonJob);
+}
+
+export async function getCarbonJob(jobId: string): Promise<Job> {
+  const { data } = await carbonHttp.get(`/jobs/${jobId}`);
+  return mapCarbonJob(data.job);
+}
+
+export async function createCarbonJob(payload: {
+  customerName: string;
+  address: string;
+  trade?: string;
+  symptom?: string;
+  scheduledFor?: string;
+  assignedTech?: string;
+  latitude?: number;
+  longitude?: number;
+}): Promise<Job> {
+  const { data } = await carbonHttp.post('/jobs', payload);
+  return mapCarbonJob(data.job);
+}
+
+export async function patchCarbonJob(
+  jobId: string,
+  patch: Record<string, unknown>,
+): Promise<Job> {
+  const { data } = await carbonHttp.patch(`/jobs/${jobId}`, patch);
+  return mapCarbonJob(data.job);
+}
+
+export async function addCarbonJobNote(
+  jobId: string,
+  body: string,
+  author = 'tech',
+): Promise<void> {
+  await carbonHttp.post(`/jobs/${jobId}/notes`, { body, author });
+}
+
+export async function addCarbonJobPhoto(
+  jobId: string,
+  url: string,
+  caption?: string,
+): Promise<void> {
+  await carbonHttp.post(`/jobs/${jobId}/photos`, { url, caption });
+}
+
+export const carbonJobsApi = {
+  getCarbonJobs,
+  getCarbonJob,
+  createCarbonJob,
+  patchCarbonJob,
+  addCarbonJobNote,
+  addCarbonJobPhoto,
+};
