@@ -8,7 +8,7 @@ import { Config } from '../config';
 import { useTitaniumStore } from '../store';
 
 const BRAND = '#1D4ED8';
-const BUILD = 'v1.2';
+const BUILD = 'v1.3';
 
 /** Sign-in gate for the Titanium field app. Authenticates against Manifold
  *  and stores the Bearer token used by carbonClient for all ERP calls. */
@@ -16,6 +16,7 @@ export function LoginScreen() {
   const login = useTitaniumStore((s) => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const backendHost = Config.MANIFOLD_AUTH_URL.replace(/^https?:\/\//, '').replace(/\/api.*$/, '');
@@ -66,19 +67,27 @@ export function LoginScreen() {
           onChangeText={setEmail}
           placeholderTextColor="#9CA3AF"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-          textContentType="password"
-          keyboardType={Platform.OS === 'android' ? 'visible-password' : undefined}
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor="#9CA3AF"
-        />
+        <View style={styles.pwRow}>
+          <TextInput
+            style={styles.pwInput}
+            placeholder="Password"
+            secureTextEntry={!showPw}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            textContentType="password"
+            value={password}
+            onChangeText={setPassword}
+            placeholderTextColor="#9CA3AF"
+          />
+          <TouchableOpacity
+            style={styles.eye}
+            onPress={() => setShowPw((v) => !v)}
+            accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+          >
+            <Text style={styles.eyeTxt}>{showPw ? '🙈' : '👁'}</Text>
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={[styles.btn, busy && { opacity: 0.6 }]}
           onPress={onSubmit}
@@ -103,6 +112,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, marginBottom: 12, color: '#111827',
   },
+  pwRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, marginBottom: 12,
+  },
+  pwInput: {
+    flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#111827',
+  },
+  eye: { paddingHorizontal: 14, paddingVertical: 10 },
+  eyeTxt: { fontSize: 20 },
   btn: {
     backgroundColor: BRAND, borderRadius: 10, paddingVertical: 14,
     alignItems: 'center', marginTop: 4,
