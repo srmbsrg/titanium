@@ -1,0 +1,61 @@
+name: Build Carbon APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-carbon-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MANIFOLD_API_URL: https://manifold-web-production.up.railway.app/api/erp
+      CARBON_API_URL: https://manifold-web-production.up.railway.app/api/carbon
+      MANIFOLD_AUTH_URL: https://manifold-web-production.up.railway.app/api/mobile/login
+      STRIPE_PUBLISHABLE_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          yes | sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" >/dev/null
+
+      - name: Install JS dependencies
+        run: npm ci || npm install
+
+      - name: Build release APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleRelease --no-daemon -x lint
+
+      - name: Stage APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk carbon.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: carbon-apk
+          path: carbon.apk
+
+      - name: Publish to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: carbon-latest
+          name: Carbon (latest build)
+          files: carbon.apk
