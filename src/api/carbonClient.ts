@@ -184,10 +184,13 @@ function mapToJob(raw: any): Job {
 }
 
 export const carbonClient = {
-  getJobs,
-  getJob,
-  updateJobStatus,
-  completeJob,
+  // Job methods repointed to the Carbon jobs API (/api/carbon/jobs), where the
+  // seeded demo jobs and the inventory-decrement loop live. (The ERP
+  // /crm/sales-orders path is a separate track the app no longer uses for jobs.)
+  getJobs: (_techId?: string) => getCarbonJobs(),
+  getJob: (id: string) => getCarbonJob(id),
+  updateJobStatus: (id: string, status: Job['status']) => patchCarbonJob(id, { status }),
+  completeJob: (report: CompletionReport) => patchCarbonJob(report.jobId, { status: 'complete' }),
   getCustomers,
   getCustomer,
   getWorkOrder,
@@ -222,6 +225,22 @@ carbonHttp.interceptors.request.use((config) => {
   return config;
 });
 
+// Normalize Carbon-side statuses (scheduled | next | on-site | complete) to the
+// vocabulary the app screens filter and colour on (scheduled | en_route | on_site | completed).
+function normStatus(s?: string): Job['status'] {
+  const m: Record<string, string> = {
+    scheduled: 'scheduled',
+    next: 'en_route',
+    en_route: 'en_route',
+    'on-site': 'on_site',
+    on_site: 'on_site',
+    complete: 'completed',
+    completed: 'completed',
+    cancelled: 'cancelled',
+  };
+  return (m[(s || '').toLowerCase()] || 'scheduled') as Job['status'];
+}
+
 function mapCarbonJob(raw: any): Job {
   const street =
     typeof raw.address === 'string' ? raw.address : raw.address?.street ?? '';
@@ -237,7 +256,7 @@ function mapCarbonJob(raw: any): Job {
     },
     address: addr,
     scheduledAt: raw.scheduledFor || raw.createdAt || new Date().toISOString(),
-    status: raw.status || 'scheduled',
+    status: normStatus(raw.status),
     description: raw.symptom || raw.diagnosis || '',
     notes: Array.isArray(raw.notes)
       ? raw.notes.map((n: any) => n.body).join('\n')
