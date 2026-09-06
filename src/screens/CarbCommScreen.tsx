@@ -255,7 +255,7 @@ export function CarbCommScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerLogo}>⚡ CARB-O-COMM</Text>
+            <Text style={styles.headerLogo}>⚡ TRADE-TALK</Text>
             <Text style={styles.headerSub}>Tes AI — Field Assistant</Text>
           </View>
           <TouchableOpacity onPress={handleClose} style={styles.closeBtn} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
@@ -279,7 +279,7 @@ export function CarbCommScreen() {
           {turns.length === 0 && !partialTranscript && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>🎙</Text>
-              <Text style={styles.emptyTitle}>Ask Tes anything</Text>
+              <Text style={styles.emptyTitle}>Ask Trade-Talk anything</Text>
               <Text style={styles.emptyHint}>
                 {"Gate code? Parts used last visit?\nCustomer preferences? Just ask."}
               </Text>

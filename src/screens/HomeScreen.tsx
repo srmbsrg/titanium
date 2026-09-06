@@ -55,10 +55,7 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Carb-O-Comm voice bar */}
-      <TouchableOpacity style={styles.carbCommBar} onPress={() => openCarbComm()} activeOpacity={0.85}>
-        <Text style={styles.carbCommBarText}>⚡ CARB-O-COMM — Ask Tes anything</Text>
-      </TouchableOpacity>
+      {/* Trade-Talk now lives in the raised center tab button */}
 
       {/* Stats bar */}
       <View style={styles.statsBar}>

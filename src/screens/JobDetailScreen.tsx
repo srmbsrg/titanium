@@ -89,7 +89,7 @@ export function JobDetailScreen({ route, navigation }: Props) {
         onPress={() => openCarbComm(jobId, job.customerId)}
         activeOpacity={0.85}
       >
-        <Text style={styles.carbCommBtnText}>⚡ Ask Tes about this job</Text>
+        <Text style={styles.carbCommBtnText}>⚡ Ask Trade-Talk about this job</Text>
       </TouchableOpacity>
 
       {/* Status */}

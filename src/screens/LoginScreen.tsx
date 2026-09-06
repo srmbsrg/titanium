@@ -8,7 +8,7 @@ import { Config } from '../config';
 import { useTitaniumStore } from '../store';
 
 const BRAND = '#1D4ED8';
-const BUILD = 'v1.4';
+const BUILD = 'v1.5';
 
 /** Sign-in gate for the Titanium field app. Authenticates against Manifold
  *  and stores the Bearer token used by carbonClient for all ERP calls. */
@@ -54,7 +54,7 @@ export function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.brand}>Titanium</Text>
+        <Text style={styles.brand}>Carbon</Text>
         <Text style={styles.sub}>Carborundum field app</Text>
         <TextInput
           style={styles.input}

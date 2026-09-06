@@ -125,10 +125,7 @@ export function DispatchScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Carb-O-Comm quick-access */}
-      <TouchableOpacity style={styles.carbCommBar} onPress={() => openCarbComm()} activeOpacity={0.8}>
-        <Text style={styles.carbCommBarText}>⚡ Tap to open Carb-O-Comm — Ask Tes anything</Text>
-      </TouchableOpacity>
+      {/* Trade-Talk now lives in the raised center tab button */}
 
       {isLoading ? (
         <View style={styles.center}>

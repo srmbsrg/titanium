@@ -73,7 +73,7 @@ export function JobPaymentScreen({ route, navigation }: Props) {
 
         {/* Carb-O-Comm quick access */}
         <TouchableOpacity style={styles.carbCommTrigger} onPress={() => openCarbComm(jobId)} activeOpacity={0.8}>
-          <Text style={styles.carbCommTriggerText}>⚡ Ask Tes about this job</Text>
+          <Text style={styles.carbCommTriggerText}>⚡ Ask Trade-Talk about this job</Text>
         </TouchableOpacity>
 
         {/* Amount */}

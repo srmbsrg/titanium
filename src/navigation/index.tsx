@@ -15,7 +15,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Text, View, TouchableOpacity } from 'react-native';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { JobDetailScreen } from '../screens/JobDetailScreen';
@@ -30,6 +30,7 @@ import { EquipmentScreen } from '../screens/EquipmentScreen';
 import { HowToScreen } from '../screens/HowToScreen';
 import { UpsellScreen } from '../screens/UpsellScreen';
 import { CarbCommScreen } from '../screens/CarbCommScreen';
+import { useTitaniumStore } from '../store';
 
 import type {
   JobsStackParamList,
@@ -118,6 +119,45 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   );
 }
 
+function EmptyTradeTalk() {
+  return null;
+}
+
+/** Raised center tab button that opens Trade-Talk (formerly Carb-O-Comm). */
+function TradeTalkButton() {
+  const openCarbComm = useTitaniumStore((s) => s.openCarbComm);
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <TouchableOpacity
+        accessibilityLabel="Open Trade-Talk"
+        activeOpacity={0.85}
+        onPress={() => openCarbComm()}
+        style={{
+          top: -16,
+          width: 62,
+          height: 62,
+          borderRadius: 31,
+          backgroundColor: '#0C1222',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 3,
+          borderColor: '#FFFFFF',
+          shadowColor: '#000',
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 8,
+        }}
+      >
+        <Text style={{ fontSize: 24 }}>⚡</Text>
+      </TouchableOpacity>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: BRAND_ORANGE, marginTop: -2 }}>
+        Trade-Talk
+      </Text>
+    </View>
+  );
+}
+
 export function RootNavigator() {
   return (
     <NavigationContainer>
@@ -133,6 +173,11 @@ export function RootNavigator() {
         <Tab.Screen name="Jobs" component={JobsNavigator} />
         <Tab.Screen name="Dispatch" component={DispatchNavigator} />
         <Tab.Screen name="Customers" component={CustomersNavigator} />
+        <Tab.Screen
+          name="TradeTalk"
+          component={EmptyTradeTalk}
+          options={{ tabBarButton: () => <TradeTalkButton /> }}
+        />
         <Tab.Screen name="Equipment" component={EquipmentNavigator} />
         <Tab.Screen
           name="HowTo"
