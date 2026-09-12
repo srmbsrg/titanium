@@ -183,6 +183,42 @@ function mapToJob(raw: any): Job {
   };
 }
 
+// Complete a Carbon job with the FULL tech report. Transmits partsUsed (mapped to the
+// Carbon API shape { productId, sku, name, qty }) and flips status to 'complete', which
+// triggers Silicon's inventory-decrement -> low-stock-alert loop for any part that carries
+// a productId. The work summary is stored as the job diagnosis; the full human-readable
+// record (summary + labor hours + parts + signature) is preserved as a job note, since the
+// Job model has no dedicated laborHours field.
+async function completeCarbonJob(report: CompletionReport): Promise<void> {
+  const partsUsed = (report.partsUsed ?? []).map((p) => ({
+    productId: p.productId,
+    sku: p.sku,
+    name: p.name,
+    qty: p.quantity,
+  }));
+
+  await patchCarbonJob(report.jobId, {
+    status: 'complete',
+    diagnosis: report.workSummary,
+    partsUsed,
+  });
+
+  // Best-effort completion note; the job is already persisted/complete above.
+  try {
+    const lines = [
+      report.workSummary && report.workSummary.trim() ? `Work summary: ${report.workSummary.trim()}` : '',
+      `Labor hours: ${report.laborHours}`,
+      report.partsUsed && report.partsUsed.length
+        ? `Parts: ${report.partsUsed.map((p) => `${p.name} (${p.sku}) x${p.quantity}`).join('; ')}`
+        : '',
+      report.customerSignature ? 'Customer signature captured.' : '',
+    ].filter(Boolean);
+    if (lines.length) await addCarbonJobNote(report.jobId, lines.join('\n'), 'tech');
+  } catch {
+    // note is non-critical
+  }
+}
+
 export const carbonClient = {
   // Job methods repointed to the Carbon jobs API (/api/carbon/jobs), where the
   // seeded demo jobs and the inventory-decrement loop live. (The ERP
@@ -190,7 +226,7 @@ export const carbonClient = {
   getJobs: (_techId?: string) => getCarbonJobs(),
   getJob: (id: string) => getCarbonJob(id),
   updateJobStatus: (id: string, status: Job['status']) => patchCarbonJob(id, { status }),
-  completeJob: (report: CompletionReport) => patchCarbonJob(report.jobId, { status: 'complete' }),
+  completeJob: (report: CompletionReport) => completeCarbonJob(report),
   getCustomers,
   getCustomer,
   getWorkOrder,

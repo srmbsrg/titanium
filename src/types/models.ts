@@ -76,6 +76,8 @@ export interface WorkOrder {
 }
 
 export interface PartUsed {
+  // Silicon product id. When present, completing a job decrements stock and raises low-stock alerts.
+  productId?: string;
   sku: string;
   name: string;
   quantity: number;

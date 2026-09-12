@@ -51,7 +51,12 @@ const MOCK_SERVICE_HISTORY = [
 
 export function EquipmentScreen({ route }: Props) {
   const { equipmentId } = route.params;
-  void equipmentId; // TODO: fetch via carbonClient.getEquipment(equipmentId)
+  // TODO: endpoint missing - both data sources for this screen 404 on the Manifold backend:
+  //   carbonClient.getEquipment(equipmentId)      -> GET /api/erp/inventory/equipment/:id
+  //   carbonClient.getServiceHistory(equipmentId) -> GET /api/erp/crm/customers/equipment/:id/history
+  // Neither route exists yet (no installed-equipment / service-history model), so specs and
+  // history stay mocked rather than fabricated.
+  void equipmentId;
 
   const equipment = MOCK_EQUIPMENT;
   const history = MOCK_SERVICE_HISTORY;

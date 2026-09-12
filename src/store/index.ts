@@ -1,9 +1,22 @@
 /**
- * Titanium — Zustand store
+ * Titanium (Carbon) - Zustand store
  * Auth, offline queue, app state, and Carb-O-Comm voice mode state.
+ *
+ * Auth is persisted to AsyncStorage so the tech stays signed in across app
+ * restarts (token + tech identity). Call hydrateAuth() once on boot (App.tsx)
+ * to rehydrate, login() persists, logout() clears.
  */
 
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const AUTH_STORAGE_KEY = 'titanium.auth.v1';
+
+interface PersistedAuth {
+  token: string;
+  techId: string;
+  techName: string | null;
+}
 
 interface AuthState {
   techId: string | null;
@@ -56,10 +69,17 @@ export const useTitaniumStore = create<TitaniumStore>((set) => ({
   techName: null,
   token: null,
   isAuthenticated: false,
-  login: (techId, techName, token) =>
-    set({ techId, techName, token, isAuthenticated: true }),
-  logout: () =>
-    set({ techId: null, techName: null, token: null, isAuthenticated: false }),
+  login: (techId, techName, token) => {
+    set({ techId, techName, token, isAuthenticated: true });
+    // Persist so the session survives an app restart. Fire-and-forget; a
+    // storage failure must not block sign-in.
+    const payload: PersistedAuth = { token, techId, techName };
+    AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload)).catch(() => {});
+  },
+  logout: () => {
+    set({ techId: null, techName: null, token: null, isAuthenticated: false });
+    AsyncStorage.removeItem(AUTH_STORAGE_KEY).catch(() => {});
+  },
 
   // Offline queue
   queue: [],
@@ -87,5 +107,28 @@ export const useTitaniumStore = create<TitaniumStore>((set) => ({
   closeCarbComm: () =>
     set({ carbCommVisible: false, carbCommJobId: null, carbCommCustomerId: null }),
 }));
+
+/**
+ * Rehydrate the persisted auth session from AsyncStorage into the store.
+ * Safe to call once on app boot. Resolves whether or not a session was found;
+ * corrupt or partial data is ignored (treated as signed-out).
+ */
+export async function hydrateAuth(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as Partial<PersistedAuth>;
+    if (saved && saved.token && saved.techId) {
+      useTitaniumStore.setState({
+        token: saved.token,
+        techId: saved.techId,
+        techName: saved.techName ?? saved.techId,
+        isAuthenticated: true,
+      });
+    }
+  } catch {
+    // Corrupt/unreadable storage -> stay signed out.
+  }
+}
 
 export { QueryClient } from '@tanstack/react-query';

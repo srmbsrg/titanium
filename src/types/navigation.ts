@@ -28,6 +28,7 @@ export type DispatchStackParamList = {
 
 export type RootTabParamList = {
   Jobs: undefined;
+  TradeTalk: undefined;
   Dispatch: undefined;
   Customers: undefined;
   Equipment: undefined;
