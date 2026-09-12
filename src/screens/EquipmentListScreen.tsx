@@ -17,6 +17,11 @@ import type { EquipmentStackParamList } from '../types/navigation';
 
 type Props = NativeStackScreenProps<EquipmentStackParamList, 'EquipmentList'>;
 
+// TODO: endpoint missing - no installed-equipment list endpoint on the Manifold backend.
+// carbonClient.getAllEquipment() hits GET /api/erp/inventory?type=stock, which returns
+// WAREHOUSE stock items (InventoryItem), NOT installed customer equipment (make/model/
+// serial/service-history). Wiring it here would misrepresent warehouse parts as field
+// equipment, so this screen stays mocked until a real installed-equipment endpoint exists.
 const MOCK_EQUIPMENT = [
   {
     id: 'eq-001',

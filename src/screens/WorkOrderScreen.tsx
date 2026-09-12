@@ -1,10 +1,19 @@
 /**
- * WorkOrderScreen — Create or update a work order
- * Linked to a Job. Techs can add notes, log parts, and mark complete.
+ * WorkOrderScreen - Create or update a work order.
+ * Linked to a Job. Techs can add notes, log parts, and set status.
+ *
+ * Persistence is wired to the Carbon jobs API (the job-centric track the app
+ * actually uses), not the ERP /crm/sales-orders path:
+ *   - description -> job diagnosis via PATCH /api/carbon/jobs/:id
+ *   - status + tech notes + parts -> a job note via POST /api/carbon/jobs/:id/notes
+ * Both endpoints are live on the Manifold backend. (The legacy
+ * carbonClient.saveWorkOrder() targets /crm/sales-orders, whose POST schema
+ * requires { customerId, items[] } - a different contract - so it is not used here.)
  */
 
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +24,8 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useMutation } from '@tanstack/react-query';
+import { addCarbonJobNote, patchCarbonJob } from '../api/carbonClient';
 import type { JobsStackParamList } from '../types/navigation';
 
 type Props = NativeStackScreenProps<JobsStackParamList, 'WorkOrder'>;
@@ -23,7 +34,8 @@ export function WorkOrderScreen({ route, navigation }: Props) {
   const { workOrderId, jobId } = route.params;
   const isNew = !workOrderId;
 
-  // TODO: if !isNew, fetch via useQuery(() => carbonClient.getWorkOrder(workOrderId))
+  // TODO: if !isNew, prefill via carbonClient.getJob(jobId) (GET /api/carbon/jobs/:id)
+  // once a dedicated work-order record exists; today a WO maps onto the job itself.
   const [description, setDescription] = useState(
     isNew ? '' : 'Replace 16x25x1 air filter, inspect coils, check refrigerant.',
   );
@@ -35,10 +47,27 @@ export function WorkOrderScreen({ route, navigation }: Props) {
     isNew ? 'open' : 'in_progress',
   );
 
-  const handleSave = () => {
-    // TODO: carbonClient.saveWorkOrder({ jobId, workOrderId, description, techNotes, parts, status })
-    navigation.goBack();
-  };
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      // Persist the work-order detail onto the job record.
+      if (description.trim()) {
+        await patchCarbonJob(jobId, { diagnosis: description.trim() });
+      }
+      const noteLines = [
+        `Work order status: ${status.replace('_', ' ')}`,
+        techNotes.trim() ? `Notes: ${techNotes.trim()}` : '',
+        parts.trim() ? `Parts: ${parts.trim()}` : '',
+      ].filter(Boolean);
+      if (noteLines.length) {
+        await addCarbonJobNote(jobId, noteLines.join('\n'), 'tech');
+      }
+    },
+    onSuccess: () => navigation.goBack(),
+    onError: () =>
+      Alert.alert('Error', 'Could not save work order. Check your connection and try again.'),
+  });
+
+  const handleSave = () => saveMutation.mutate();
 
   return (
     <KeyboardAvoidingView
@@ -120,11 +149,17 @@ export function WorkOrderScreen({ route, navigation }: Props) {
           style={[
             styles.saveBtn,
             status === 'complete' && styles.saveBtnComplete,
+            saveMutation.isPending && { opacity: 0.6 },
           ]}
           onPress={handleSave}
+          disabled={saveMutation.isPending}
         >
           <Text style={styles.saveBtnText}>
-            {status === 'complete' ? 'Mark Complete & Save' : 'Save Work Order'}
+            {saveMutation.isPending
+              ? 'Saving...'
+              : status === 'complete'
+              ? 'Mark Complete & Save'
+              : 'Save Work Order'}
           </Text>
         </TouchableOpacity>
 

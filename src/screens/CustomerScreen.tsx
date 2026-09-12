@@ -1,10 +1,16 @@
 /**
- * CustomerScreen — Customer record + equipment history
+ * CustomerScreen - Customer record + equipment history.
  * Shows contact info and a list of all equipment at the customer's site.
+ *
+ * Contact info is wired to the live Manifold ERP:
+ *   carbonClient.getCustomer(customerId) -> GET /api/erp/crm/customers/:id
+ *
+ * Equipment-on-site is still mocked: see the TODO below.
  */
 
 import React from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -13,19 +19,18 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
+import { carbonClient } from '../api/carbonClient';
+import type { Address } from '../types/models';
 import type { CustomersStackParamList } from '../types/navigation';
 
 type Props = NativeStackScreenProps<CustomersStackParamList, 'CustomerDetail'>;
 
-const MOCK_CUSTOMER = {
-  id: 'cust-001',
-  name: 'Smith Residence',
-  phone: '(512) 555-0192',
-  email: 'j.smith@example.com',
-  address: '1402 Elm St, Austin TX 78701',
-  notes: 'Long-time customer. Prefers morning appointments.',
-};
-
+// TODO: endpoint missing - there is no installed-equipment endpoint on the Manifold
+// backend. carbonClient.getEquipmentForCustomer() targets
+// GET /api/erp/crm/customers/:id/equipment, which 404s (no such route / no installed-
+// equipment model). Until the backend exposes one, equipment-on-site stays mocked so we
+// do not fabricate live data.
 const MOCK_EQUIPMENT = [
   {
     id: 'eq-001',
@@ -45,12 +50,44 @@ const MOCK_EQUIPMENT = [
   },
 ];
 
+function formatAddress(a?: Address): string {
+  if (!a) return '';
+  return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
+}
+
 export function CustomerScreen({ route, navigation }: Props) {
   const { customerId } = route.params;
-  void customerId; // TODO: fetch from carbonClient.getCustomer(customerId)
 
-  const customer = MOCK_CUSTOMER;
+  const {
+    data: customer,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => carbonClient.getCustomer(customerId),
+  });
+
   const equipment = MOCK_EQUIPMENT;
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#1D4ED8" />
+      </View>
+    );
+  }
+
+  if (isError || !customer) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Could not load customer.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -59,7 +96,7 @@ export function CustomerScreen({ route, navigation }: Props) {
         <Row label="Name" value={customer.name} />
         <Row label="Phone" value={customer.phone} />
         <Row label="Email" value={customer.email} />
-        <Row label="Address" value={customer.address} />
+        <Row label="Address" value={formatAddress(customer.address)} />
       </Section>
 
       {/* Notes */}
@@ -69,7 +106,7 @@ export function CustomerScreen({ route, navigation }: Props) {
         </Section>
       ) : null}
 
-      {/* Equipment */}
+      {/* Equipment (mocked - see TODO above) */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Equipment on Site</Text>
         {equipment.length === 0 ? (
@@ -129,7 +166,7 @@ function Row({ label, value }: { label: string; value?: string }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value ?? '—'}</Text>
+      <Text style={styles.rowValue}>{value ? value : '-'}</Text>
     </View>
   );
 }
@@ -137,6 +174,10 @@ function Row({ label, value }: { label: string; value?: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   content: { padding: 16, gap: 16, paddingBottom: 40 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F9FAFB' },
+  errorText: { fontSize: 15, color: '#B91C1C', marginBottom: 12 },
+  retryBtn: { backgroundColor: '#1D4ED8', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
+  retryBtnText: { color: '#FFFFFF', fontWeight: '700' },
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,

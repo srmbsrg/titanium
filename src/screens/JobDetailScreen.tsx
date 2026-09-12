@@ -7,6 +7,9 @@
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -45,7 +48,16 @@ export function JobDetailScreen({ route, navigation }: Props) {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (next: Job['status']) => carbonClient.updateJobStatus(jobId, next),
+    // Offline-aware: when disconnected, queue the status change and let the
+    // offline flush replay it on reconnect instead of failing the tech's tap.
+    mutationFn: async (next: Job['status']) => {
+      const { isOnline, enqueue } = useTitaniumStore.getState();
+      if (!isOnline) {
+        enqueue({ type: 'updateJobStatus', payload: { jobId, status: next } });
+        return null;
+      }
+      return carbonClient.updateJobStatus(jobId, next);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', jobId] });
       queryClient.invalidateQueries({ queryKey: ['dispatch-jobs'] });
@@ -111,6 +123,15 @@ export function JobDetailScreen({ route, navigation }: Props) {
       {/* Site */}
       <Section title="Site Address">
         <Text style={styles.bodyText}>{addressStr}</Text>
+        {addressStr.trim().length > 0 && (
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => openMaps(addressStr)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.navBtnText}>🧭  Navigate</Text>
+          </TouchableOpacity>
+        )}
       </Section>
 
       {/* Job description */}
@@ -188,6 +209,22 @@ export function JobDetailScreen({ route, navigation }: Props) {
   );
 }
 
+// Deep-link the device's maps app for turn-by-turn navigation to `address`.
+// No API key / react-native-maps needed: iOS -> Apple Maps (maps://), Android ->
+// Google Maps navigation intent (google.navigation:), with a universal
+// https://maps fallback if neither scheme is handled.
+function openMaps(address: string) {
+  const q = encodeURIComponent(address);
+  const nativeUrl =
+    Platform.OS === 'ios' ? `maps://?daddr=${q}` : `google.navigation:q=${q}`;
+  const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+  Linking.openURL(nativeUrl).catch(() => {
+    Linking.openURL(webUrl).catch(() =>
+      Alert.alert('Navigation unavailable', 'No maps app could be opened for this address.'),
+    );
+  });
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
@@ -263,6 +300,15 @@ const styles = StyleSheet.create({
 
   bodyText: { fontSize: 14, color: '#374151', lineHeight: 21 },
   notes: { backgroundColor: '#FFFBEB', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#F59E0B' },
+
+  navBtn: {
+    marginTop: 10,
+    backgroundColor: '#1D4ED8',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  navBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 
   woButton: {
     backgroundColor: '#EFF6FF',
