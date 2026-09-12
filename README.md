@@ -1,178 +1,122 @@
-# Loadstone — Structured Hydration
+﻿# Carbon — field-service app (repo: `titanium`)
 
-> The app currently mounted by this repo is **Loadstone**, the companion app for
-> the Loadstone magnetic water flask. The legacy Titanium / Carbon ERP field app
-> (documented further down) still lives under `src/` but is no longer mounted by
-> `App.tsx`.
+Carbon is the native mobile app for trades technicians (HVAC, plumbing, electrical, elevator,
+auto). A tech signs in, works their dispatch queue, and runs a job end to end: view job
+details and customer/site records, create and update work orders, capture time & materials,
+take on-site payment, and close the job with a completion report. It is the field-side
+counterpart to **Silicon** (the `manifold` ERP), which holds the system of record — Carbon
+reads and writes jobs, customers, and parts through Silicon's live APIs.
 
-A dark, premium, **fully offline** wellness companion for the Loadstone flask.
-No backend, no accounts, no cloud sync — everything is stored on-device with
-AsyncStorage.
+> The repo is named `titanium` (the app's former element name); `package.json` is now
+> `carbon@1.5.0`. A separate "Loadstone" hydration companion once briefly mounted in
+> `App.tsx`; it has been **un-mounted** and its modules remain parked under `src/loadstone/`
+> for a possible future split. `App.tsx` mounts the Carbon field app.
 
-## Screens
+## Tech stack
 
-| Screen | What it does |
+| Layer | Choice |
 |---|---|
-| **Home / Dashboard** | Daily hydration progress ring vs. goal (default 64 oz), time since last drink, structured-water motivation, quick-log shortcuts |
-| **Log** | Tap-to-log 8 / 16 / 32 oz (full flask) presets plus a custom-amount stepper; today's entries with remove |
-| **Protocol** | The 30-minute Magnetic Structuring Protocol timer with a live pulsing field animation and start / pause / reset |
-| **Science** | What structured water is, the Halbach array, and why continuous immersion beats brief exposure |
-| **Settings** | Daily goal (oz), reminders toggle, and reminder time picker — all persisted |
-| **History** | Full hydration log grouped by day with per-day totals (pushed from the dashboard) |
+| Framework | React Native **0.85** — bare CLI, **not Expo** |
+| Language | TypeScript 5 (`npx tsc --noEmit` = 0 errors) |
+| React | 19 |
+| Navigation | React Navigation 7 (native stack + bottom tabs) |
+| Server state | TanStack React Query |
+| Local/auth state | Zustand, persisted via AsyncStorage |
+| HTTP | Axios (`src/api/carbonClient.ts`) |
+| Voice (Trade-Talk) | `@react-native-voice/voice`, `react-native-sound` |
+
+## Install & run locally
+
+### Prerequisites
+
+- Node **>= 22.11**
+- Ruby + CocoaPods and Xcode 15+ (iOS)
+- Android Studio + Android SDK (Android)
+
+### Commands
+
+```bash
+npm install
+
+# iOS
+cd ios && bundle install && bundle exec pod install && cd ..
+npm run ios            # or: npx react-native run-ios
+
+# Android
+npm run android        # or: npx react-native run-android
+
+# Metro bundler standalone
+npm start
+
+# Checks
+npx tsc --noEmit       # clean
+npm test               # jest
+```
+
+### Backend configuration
+
+Defaults point at the live Railway-hosted Silicon backend, so the app runs out of the box
+with no env setup. To override per environment, set these before the build — they are inlined
+into the bundle by `babel-plugin-transform-inline-environment-variables` (see `src/config.ts`):
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `MANIFOLD_API_URL` | `https://manifold-web-production.up.railway.app/api/erp` | ERP data (customers, work orders, finance) |
+| `CARBON_API_URL` | `https://manifold-web-production.up.railway.app/api/carbon` | Carbon jobs API (Job/JobNote/JobPhoto) |
+| `MANIFOLD_AUTH_URL` | `https://manifold-web-production.up.railway.app/api/mobile/login` | Mobile sign-in; returns `{ token, techId, techName }` |
+| `STRIPE_PUBLISHABLE_KEY` | *(empty)* | On-site card payments (not yet live) |
+| `ELEVENLABS_API_KEY` | *(empty)* | Voice features |
 
 ## Architecture
 
 ```
-src/loadstone/
-  theme.ts            # colors / spacing / typography (bg #060A12, accent #24D8E4)
-  types.ts            # DrinkLog, Settings, presets, protocol duration
-  storage.ts          # AsyncStorage read/write (defensive, offline-first)
-  store.ts            # Zustand store + pure derived helpers (today's total, last drink)
-  format.ts           # time-ago, clock, mm:ss, motivational copy
-  hooks.ts            # useNow ticking clock
-  navigation.tsx      # bottom tabs + Home native stack (Dashboard → History)
-  LoadstoneApp.tsx    # root: hydrates persisted state on mount, then renders
-  components/         # ProgressRing (SVG), PulseRing (Animated), shared UI
-  screens/            # Dashboard, LogDrink, Protocol, Science, Settings, History
-```
-
-- **Navigation:** React Navigation 7 — bottom tabs with a native stack on Home.
-- **State:** Zustand, loaded from AsyncStorage once on launch and written back
-  after every mutation, so logs and settings survive restarts.
-- **Persistence test:** `__tests__/loadstone.store.test.ts` proves logged drinks
-  round-trip through storage across a simulated restart.
-
-## Verify
-
-```bash
-npx tsc --noEmit   # clean
-npm test           # store/persistence + render tests pass
-```
-
-> Reminder scheduling itself needs a native notifications module and is out of
-> scope for this offline build — the reminder preference is stored and ready to
-> wire up.
-
----
-
-# Titanium (Ti — Element 22) — legacy
-
-Field technician mobile app for the **Carbon ERP** platform.
-
-Built by **Foundry Familiars** / Carborundum AI.
-
----
-
-## What This Is
-
-Titanium is the native mobile companion to Carbon — the ERP for trades businesses (HVAC, plumbing, electrical, auto service, elevator). Field techs use Titanium to:
-
-- View their daily job queue
-- Access job details, customer records, and site addresses
-- Create and update work orders in the field
-- Look up equipment history for a site
-
-Offline-capable by design. Not a PWA.
-
----
-
-## Stack
-
-| Layer | Choice |
-|---|---|
-| Framework | React Native 0.85 (bare CLI, no Expo) |
-| Language | TypeScript |
-| Navigation | React Navigation 7 (native stack + bottom tabs) |
-| Server state | TanStack React Query |
-| Local/UI state | Zustand |
-| HTTP | Axios (`src/api/carbonClient.ts`) |
-
----
-
-## Run
-
-### Prerequisites
-
-- Node 22+
-- Ruby (iOS)
-- Xcode 15+ (iOS)
-- Android Studio + SDK 34 (Android)
-- CocoaPods: `bundle install && bundle exec pod install`
-
-### iOS
-
-```bash
-cd ios && bundle exec pod install && cd ..
-npx react-native run-ios
-```
-
-### Android
-
-```bash
-npx react-native run-android
-```
-
-### Metro bundler (standalone)
-
-```bash
-npm start
-```
-
----
-
-## Project Structure
-
-```
+App.tsx                 # root: rehydrates persisted auth, then gates Login vs RootNavigator
 src/
-  api/
-    carbonClient.ts         # Axios client → Carbon ERP backend
-  navigation/
-    index.tsx               # Root navigator (tabs + stacks)
-  screens/
-    HomeScreen.tsx          # Today's job queue
-    JobDetailScreen.tsx     # Job record + drill-downs
-    WorkOrderScreen.tsx     # Create / update work order
-    CustomerListScreen.tsx  # Searchable customer list
-    CustomerScreen.tsx      # Customer record + equipment
-    EquipmentListScreen.tsx # All equipment across sites
-    EquipmentScreen.tsx     # Equipment detail + service history
-  store/
-    index.ts                # Zustand store (auth, offline queue)
-  types/
-    models.ts               # Domain types (Job, Customer, Equipment, WorkOrder)
-    navigation.ts           # Navigator param list types
+  config.ts             # runtime config + Railway/Silicon default URLs
+  api/carbonClient.ts   # Axios clients for /api/erp and /api/carbon + domain methods
+  navigation/           # tabs + native stacks
+  screens/              # Home, Dispatch, JobDetail, WorkOrder, JobComplete, JobPayment,
+                        #   CustomerList, Customer, EquipmentList, Equipment, HowTo,
+                        #   Upsell, CarbComm (Trade-Talk voice), Login
+  store/                # Zustand store (auth, session); persisted to AsyncStorage
+  types/models.ts       # Job, Customer, Equipment, WorkOrder, CompletionReport, ...
+  loadstone/            # PARKED — un-mounted hydration app, not part of Carbon
 ```
 
----
+- **Auth** persists across restarts: `App.tsx` rehydrates the session from AsyncStorage
+  before choosing the login gate or the app, so a signed-in tech stays signed in.
+- Job statuses are normalized from the Carbon API vocabulary
+  (`scheduled | next | on-site | complete`) to the app's
+  (`scheduled | en_route | on_site | completed`).
 
-## Backend
+### Carbon <-> Silicon integration seam
 
-Carbon ERP API base URL is set via `CARBON_API_URL` env var (see `src/api/carbonClient.ts`).
+- **Sign-in:** `POST /api/mobile/login` returns a Bearer token; Carbon stores it and attaches
+  `Authorization: Bearer <token>` to every request.
+- **Jobs/dispatch:** the app uses the dedicated Carbon jobs API (`/api/carbon/jobs`), backed
+  by Silicon's Postgres `Job` / `JobNote` / `JobPhoto` models.
+- **Job completion → inventory:** on completion, Carbon transmits parts/labor/summary. Parts
+  are sent as `{ productId, sku, name, qty }` and the status flips to `complete`; for any part
+  carrying a `productId`, this drives **Silicon's inventory-decrement → low-stock-alert loop**.
+  The human-readable record (summary + labor hours + parts + signature) is also saved as a job
+  note. Customer screens and Work Order save are wired to the live endpoints.
 
-Default: `https://api.carbonerp.internal/v1`
+## Current status & known gaps (not yet production-ready)
 
-All screens currently use mock data. Wire up real data by implementing
-`useQuery(() => carbonClient.<method>(...))` in each screen.
+**Working / verified:**
+- `npx tsc --noEmit` = **0 errors**.
+- Live backend integration: jobs/dispatch/status, job completion with full parts/labor/summary
+  report (drives Silicon inventory decrement), auth persisted via AsyncStorage, Customers and
+  Work Order save wired to live endpoints.
 
----
+**Stubs / next pass:**
+- **Equipment & service-history screens** are stubs — the corresponding Silicon backend
+  endpoints don't exist yet.
+- Maps / navigation, photo capture, and real Stripe card processing are not implemented.
+- Trade-Talk voice is not yet working on Android.
+- Offline queue is not implemented.
 
-## GitHub
-
-Repository: [github.com/srmbsrg/titanium](https://github.com/srmbsrg/titanium)
-
-### Manual repo setup (if push was not completed automatically)
-
-Store your GitHub PAT at `C:\Users\scott\.secrets\github_pat.txt`, then:
-
-```bash
-# Create repo
-PAT=$(cat /c/Users/scott/.secrets/github_pat.txt)
-curl -X POST https://api.github.com/user/repos \
-  -H "Authorization: Bearer $PAT" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"titanium","description":"Titanium field app — Carbon ERP companion (Foundry Familiars)","private":false}'
-
-# Push
-git remote add origin https://github.com/srmbsrg/titanium.git
-git push -u origin master
-```
+**Release blocker:**
+- The Android **`release` build is debug-signed** (`signingConfig signingConfigs.debug` for
+  both build types in `android/app/build.gradle`). A real upload keystore is required before
+  a Play Store / production release.
