@@ -5,10 +5,21 @@
  * Auth is persisted to AsyncStorage so the tech stays signed in across app
  * restarts (token + tech identity). Call hydrateAuth() once on boot (App.tsx)
  * to rehydrate, login() persists, logout() clears.
+ *
+ * The offline queue holds mutating actions taken while disconnected. Screens
+ * enqueue when useTitaniumStore.getState().isOnline is false; connectivity is
+ * driven into setOnline() and the queue is drained by flushQueue() (both in
+ * ./offline.ts, wired to @react-native-community/netinfo on app boot).
  */
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {
+  CompletionReport,
+  JobStatus,
+  PaymentRecord,
+  WorkOrder,
+} from '../types/models';
 
 const AUTH_STORAGE_KEY = 'titanium.auth.v1';
 
@@ -27,16 +38,38 @@ interface AuthState {
   logout: () => void;
 }
 
-interface OfflineQueueItem {
-  id: string;
-  type: 'saveWorkOrder' | 'updateJobStatus' | 'completeJob' | 'recordPayment';
-  payload: unknown;
-  createdAt: string;
+// Correlated map of queue action type -> payload shape. Keeping type and
+// payload correlated (rather than payload: unknown) means enqueue() call sites
+// and the flush replayer are both type-checked against the same contract.
+export interface OfflineQueuePayloads {
+  saveWorkOrder: Omit<WorkOrder, 'id' | 'createdAt'> & { id?: string };
+  updateJobStatus: { jobId: string; status: JobStatus };
+  completeJob: CompletionReport;
+  recordPayment: PaymentRecord;
+  addJobNote: { jobId: string; body: string; author?: string };
+  addJobPhoto: { jobId: string; url: string; caption?: string };
 }
+
+export type OfflineQueueType = keyof OfflineQueuePayloads;
+
+// A fully-formed, persisted queue entry (discriminated on `type`).
+export type OfflineQueueItem = {
+  [K in OfflineQueueType]: {
+    id: string;
+    type: K;
+    payload: OfflineQueuePayloads[K];
+    createdAt: string;
+  };
+}[OfflineQueueType];
+
+// What a caller passes to enqueue() (id + createdAt are assigned by the store).
+export type OfflineQueueInput = {
+  [K in OfflineQueueType]: { type: K; payload: OfflineQueuePayloads[K] };
+}[OfflineQueueType];
 
 interface OfflineQueueState {
   queue: OfflineQueueItem[];
-  enqueue: (item: Omit<OfflineQueueItem, 'id' | 'createdAt'>) => void;
+  enqueue: (item: OfflineQueueInput) => void;
   dequeue: (id: string) => void;
   clearQueue: () => void;
 }
@@ -87,7 +120,11 @@ export const useTitaniumStore = create<TitaniumStore>((set) => ({
     set((state) => ({
       queue: [
         ...state.queue,
-        { ...item, id: `q-${_nextQueueId++}`, createdAt: new Date().toISOString() },
+        {
+          ...item,
+          id: `q-${_nextQueueId++}`,
+          createdAt: new Date().toISOString(),
+        } as OfflineQueueItem,
       ],
     })),
   dequeue: (id) =>
